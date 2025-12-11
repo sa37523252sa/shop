@@ -1,4 +1,5 @@
-const pool = require("../config/db");
+const pool = require("./db");
+
 const cloudinary = require("cloudinary").v2;
 const fs = require("fs");
 
