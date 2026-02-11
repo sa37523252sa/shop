@@ -11,7 +11,8 @@
         .card { background: #fff; padding: 16px; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
         .product-img { width: 100%; height: 220px; object-fit: contain; background: #fff; border-radius: 6px; }
-        .btn { padding: 8px 14px; border-radius: 6px; border: none; cursor: pointer; }
+        .btn { padding: 8px 14px; border-radius: 6px; border: none; cursor: pointer; transition: 0.2s; }
+        .btn:hover { opacity: 0.8; }
         .btn-primary { background: #2b8cff; color: #fff; }
         .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; z-index: 100; }
         .modal { background: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
@@ -69,7 +70,7 @@
         <div id="optionsContainer" style="margin-top:10px;"></div>
         <button class="btn" onclick="addOptionField()" style="margin-bottom:15px; background:#eee;">+ 加一個選項</button>
         <div style="display:flex; gap:10px;">
-            <button class="btn btn-primary" id="saveProduct">新增商品</button>
+            <button class="btn btn-primary" id="saveProduct">確認並上架</button>
             <button class="btn" onclick="closeModal('adminModal')">取消</button>
         </div>
     </div>
@@ -141,15 +142,17 @@
                 `;
                 container.appendChild(div);
             });
-        } catch (err) { container.innerHTML = "連線失敗，請稍後再試。"; }
+        } catch (err) { container.innerHTML = "目前無法獲取商品。"; }
     }
 
-    // 重點修正：語法正確的 saveProductToCloud
     async function saveProductToCloud(e) {
         if (e) e.preventDefault();
         const btn = document.getElementById('saveProduct');
         
-        if (!authToken) return alert("請先登入管理員帳號！");
+        if (!authToken) {
+            alert("請先登入管理員帳號！");
+            return;
+        }
 
         const title = document.getElementById('prodTitle').value;
         const imageFile = document.getElementById('prodImage').files[0];
@@ -162,9 +165,12 @@
             if(name && price) options.push({ name, price });
         });
 
-        if(!title || options.length === 0) return alert("請填寫商品名稱與至少一個價格");
+        if(!title || options.length === 0) {
+            alert("請填寫商品名稱與至少一個價格");
+            return;
+        }
 
-        btn.innerText = "上傳中...";
+        btn.innerText = "正在上傳至 Render...";
         btn.disabled = true;
 
         const formData = new FormData();
@@ -186,13 +192,13 @@
                 alert("✨ 商品新增成功！");
                 location.reload();
             } else {
-                alert("失敗：" + (result.message || "伺服器錯誤"));
+                alert("新增失敗：" + (result.message || "伺服器拒絕請求"));
             }
         } catch (err) {
-            alert("連線失敗！伺服器可能正在休眠或重啟中。");
-            console.error(err);
+            alert("連線失敗！Render 伺服器可能正在休眠（喚醒需約 50 秒），請稍後再試。");
+            console.error("Error details:", err);
         } finally {
-            btn.innerText = "新增商品";
+            btn.innerText = "確認並上架";
             btn.disabled = false;
         }
     }
@@ -202,6 +208,7 @@
         const adminBtn = document.getElementById('openAdmin');
         if(currentUser) {
             area.innerHTML = `你好, ${currentUser.name} <button class="btn" onclick="logout()" style="padding:2px 8px; font-size:12px;">登出</button>`;
+            // 修正：只要是管理員就顯示按鈕
             if(currentUser.is_admin) adminBtn.style.display = 'inline-block';
         } else {
             area.innerHTML = "訪客模式";
@@ -222,6 +229,7 @@
 
     function logout() { localStorage.clear(); location.reload(); }
 
+    // 事件監聽綁定
     document.getElementById('openLogin').onclick = () => openModal('authModal');
     document.getElementById('loginSubmit').onclick = () => handleAuth('login');
     document.getElementById('registerSubmit').onclick = () => handleAuth('register');
