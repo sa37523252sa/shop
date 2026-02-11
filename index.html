@@ -1,118 +1,89 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>商品訂購系統 - 雲端版</title>
-<style>
-  body{font-family: Arial, sans-serif; margin:16px; background:#f7f7f8;}
-  .card{background:#fff;padding:15px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,0.1);margin-bottom:12px}
-  .btn{padding:8px 12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer}
-  .btn-primary{background:#2b8cff;color:#fff;border-color:#2b8cff}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px}
-  .product-img { width: 100%; height: 180px; object-fit: contain; background: #eee; border-radius: 6px; }
-  input{padding:8px; width:90%; margin-bottom:10px; border-radius:5px; border:1px solid #ddd}
-</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>雲端同步商城</title>
+    <style>
+        /* 這裡保留你原本的 CSS 樣式... */
+        body{font-family: Arial, sans-serif; margin:16px; background:#f7f7f8;}
+        .card{background:#fff;padding:12px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,0.1);margin-bottom:12px}
+        .btn{padding:8px 12px; cursor:pointer}
+        .btn-primary{background:#2b8cff;color:#fff}
+        .product-img { width: 100%; height: 200px; object-fit: contain; }
+    </style>
 </head>
 <body>
-
-<header style="display:flex; justify-content:space-between; align-items:center">
-  <h2>雲端商城</h2>
-  <div id="userArea">載入中...</div>
+<header style="display:flex; justify-content:space-between;">
+    <h1>雲端商城</h1>
+    <div id="userArea">載入中...</div>
 </header>
 
-<div class="card" id="authBox" style="display:none">
-  <h3>登入 / 註冊</h3>
-  <input id="email" placeholder="Email" type="email"><br>
-  <input id="password" placeholder="密碼" type="password"><br>
-  <button class="btn btn-primary" onclick="handleAuth('login')">登入</button>
-  <button class="btn" onclick="handleAuth('register')">註冊新帳號</button>
+<div class="container">
+    <div class="card">
+        <button class="btn btn-primary" id="openAuth">登入 / 註冊</button>
+        <button class="btn" id="openAdmin" style="display:none">管理後台</button>
+    </div>
+    <div id="mainContent" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;"></div>
 </div>
 
-<div class="grid" id="productGrid">
-  </div>
+<div id="adminPanel" style="display:none;" class="card">
+    <h3>管理後台</h3>
+    <form id="productForm">
+        <input id="prodTitle" placeholder="商品名稱" required><br>
+        <input id="prodPrice" placeholder="價格" type="number" required><br>
+        <button type="submit" class="btn btn-primary">確認新增商品</button>
+        <button type="button" class="btn" onclick="document.getElementById('adminPanel').style.display='none'">關閉</button>
+    </form>
+</div>
 
 <script>
-const API_BASE = "https://shop-3b84.onrender.com";
-let token = localStorage.getItem('shop_token');
+const API_BASE = "https://shop-3b84.onrender.com"; // 你的 Render 網址
 
-// 1. 初始化檢查登入狀態
-function init() {
-    const user = JSON.parse(localStorage.getItem('shop_user'));
-    const userArea = document.getElementById('userArea');
-    if (user && token) {
-        userArea.innerHTML = `你好, ${user.name} <button class="btn" onclick="logout()">登出</button>`;
-        document.getElementById('authBox').style.display = 'none';
-        fetchProducts();
-    } else {
-        userArea.innerHTML = `未登入`;
-        document.getElementById('authBox').style.display = 'block';
-        fetchProducts();
-    }
-}
-
-// 2. 處理登入與註冊 (連動雲端)
-async function handleAuth(type) {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    
-    if(!email || !password) return alert("請輸入帳密");
-
-    try {
-        const path = type === 'login' ? '/api/auth/login' : '/api/auth/register';
-        const res = await fetch(`${API_BASE}${path}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, name: email.split('@')[0] })
-        });
-        
-        const data = await res.json();
-        if (res.ok) {
-            localStorage.setItem('shop_token', data.token);
-            localStorage.setItem('shop_user', JSON.stringify(data.user || data));
-            alert(type === 'login' ? "登入成功" : "註冊成功，請重新登入");
-            location.reload();
-        } else {
-            alert("失敗：" + (data.message || "帳密錯誤"));
-        }
-    } catch (err) {
-        alert("連線後端失敗，請確認 Render 已經 Live");
-    }
-}
-
-// 3. 抓取雲端商品
+// 1. 抓取商品改為從 Render 抓取
 async function fetchProducts() {
     try {
         const res = await fetch(`${API_BASE}/api/products/list`);
         const data = await res.json();
-        const grid = document.getElementById('productGrid');
-        grid.innerHTML = '';
-        
-        if (!data || data.length === 0) {
-            grid.innerHTML = '<p>雲端目前沒有商品，請由電腦後端上架</p>';
-            return;
-        }
-
-        data.forEach(p => {
-            grid.innerHTML += `
-                <div class="card">
-                    <img src="${p.image_url || API_BASE+'/'+p.imagePath}" class="product-img" onerror="this.src='https://placehold.co/200'">
-                    <h4>${p.title}</h4>
-                    <p>價格: ${p.price || '視選項而定'}</p>
-                </div>
-            `;
-        });
+        const container = document.getElementById('mainContent');
+        container.innerHTML = data.map(p => `
+            <div class="card">
+                <img src="${p.imagePath ? API_BASE+'/'+p.imagePath : ''}" class="product-img">
+                <h4>${p.title}</h4>
+                <p>價格: ${p.price}</p>
+            </div>
+        `).join('');
     } catch (err) {
-        console.error(err);
+        console.error("無法載入商品", err);
     }
 }
 
-function logout() {
-    localStorage.clear();
-    location.reload();
-}
+// 2. 修正新增商品邏輯
+document.getElementById('productForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const title = document.getElementById('prodTitle').value;
+    const price = document.getElementById('prodPrice').value;
+    const token = localStorage.getItem('shop_token'); // 需從登入取得 token
 
-init();
+    try {
+        const res = await fetch(`${API_BASE}/api/products/add`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` 
+            },
+            body: JSON.stringify({ title, price })
+        });
+        if(res.ok) {
+            alert("新增成功！");
+            fetchProducts();
+        }
+    } catch (err) {
+        alert("新增失敗，請檢查權限");
+    }
+};
+
+fetchProducts();
 </script>
 </body>
 </html>
