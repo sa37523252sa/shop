@@ -153,33 +153,62 @@
     }
 
     // ====== 3. 管理功能：上傳商品至雲端 ======
-    async function saveProductToCloud() {
-        if(!authToken) return alert("請先登入管理員帳號");
-        const title = document.getElementById('prodTitle').value;
-        const file = document.getElementById('prodImage').files[0];
-        
-        const formData = new FormData();
-        formData.append('title', title);
-        if(file) formData.append('image', file);
-        
-        // 收集選項價格
-        const optionInputs = document.querySelectorAll('.opt-price');
-        optionInputs.forEach(input => {
-            if(input.value) formData.append('options', input.value);
+  async function handleAddProduct(e) {
+    if (e) e.preventDefault(); // 防止網頁跳轉
+
+    const API_BASE = "https://shop-3b84.onrender.com"; // 確保是 HTTPS
+    const token = localStorage.getItem('shop_token');
+
+    if (!token) {
+        alert("請先登入管理員帳號！");
+        return;
+    }
+
+    // 1. 抓取基本欄位 (請確認 ID 與你 700 行中的 HTML 一致)
+    const title = document.getElementById('prodTitle').value; // 原本標題 ID
+    const imageFile = document.getElementById('prodImage').files[0]; // 原本圖片 ID
+    
+    // 2. 抓取所有選項與價格 (根據你截圖中的多個選項欄位)
+    // 假設你的選項名稱 class 是 'opt-name'，價格 class 是 'opt-price'
+    const names = Array.from(document.querySelectorAll('.opt-name')).map(i => i.value);
+    const prices = Array.from(document.querySelectorAll('.opt-price')).map(i => i.value);
+    
+    const options = names.map((name, index) => ({
+        name: name,
+        price: prices[index]
+    }));
+
+    // 3. 封裝 FormData (這是上傳圖片必須用的格式)
+    const formData = new FormData();
+    formData.append('title', title);
+    if (imageFile) formData.append('image', imageFile);
+    formData.append('options', JSON.stringify(options)); // 選項轉為字串送出
+
+    try {
+        console.log("開始上傳至雲端...");
+        // 關鍵路徑：必須與 server.js 的 /api/products 對應
+        const res = await fetch(`${API_BASE}/api/products/add`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}` 
+                // 注意：上傳圖片時，千萬不要設定 'Content-Type'
+            },
+            body: formData
         });
 
-        try {
-            const res = await fetch(`${API_BASE}/api/products/add`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${authToken}` },
-                body: formData
-            });
-            if(res.ok) {
-                alert("商品已同步至雲端！");
-                location.reload();
-            } else { alert("上傳失敗，請確認管理員權限"); }
-        } catch (err) { alert("連線錯誤"); }
+        const result = await res.json();
+
+        if (res.ok) {
+            alert("✨ 商品新增成功並已同步雲端！");
+            location.reload(); // 成功後刷新頁面看結果
+        } else {
+            alert("❌ 失敗：" + (result.message || "權限不足"));
+        }
+    } catch (err) {
+        console.error("連線錯誤:", err);
+        alert("⚠️ 無法連線至 Render 伺服器，請確認 Logs 是否顯示 Live");
     }
+}
 
     // ====== UI 輔助邏輯 (保留您原本的風味) ======
     function updateUserUI() {
