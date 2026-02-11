@@ -5,6 +5,8 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+// 在你的 app.use(express.json()) 附近加上這一行
+app.use('/upload', express.static('upload'));
 app.use(express.static("public"));
 
 // 修改後
