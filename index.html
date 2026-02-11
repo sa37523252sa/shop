@@ -100,7 +100,7 @@
 
         const path = type === 'login' ? '/api/auth/login' : '/api/auth/register';
         try {
-            const res = await fetch(`${API_BASE}${path}`, {
+           const res = await fetch(`${API_BASE}/api/products/list`);
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password, name: email.split('@')[0] })
