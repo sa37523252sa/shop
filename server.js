@@ -7,9 +7,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-app.use("/auth", require("./auth"));
-app.use("/products", require("./products"));
-
+// 修改後
+app.use("/api/auth", require("./auth"));
+app.use("/api/products", require("./products"));
 
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
