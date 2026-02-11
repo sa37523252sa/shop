@@ -433,13 +433,25 @@ h1 {
     }
 
     // ====== 產品相關 ======
-    async function fetchProducts(keyword) {
-      try {
-        let url = API_BASE + "/products/list";
-        if (keyword && keyword.trim() !== "") {
-          url = API_BASE + "/products/search?keyword=" + encodeURIComponent(keyword.trim());
-        }
-        const res = await fetch(url);
+   async function fetchProducts(keyword) {
+  try {
+    // 修正點：加上 /api。根據您的後端路由設定，完整路徑應為 /api/products/list
+    let url = `${API_BASE}/api/products/list`;
+    
+    if (keyword && keyword.trim() !== "") {
+      // 修正點：加上 /api 且對應後端 search 路由
+      url = `${API_BASE}/api/products/search?keyword=` + encodeURIComponent(keyword.trim());
+    }
+    
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("伺服器回應錯誤");
+    const data = await res.json();
+    renderProducts(data);
+  } catch (err) {
+    console.error(err);
+    mainContent.innerHTML = '<div class="card">無法載入雲端商品，請確認 Render 伺服器已啟動。</div>';
+  }
+}
         if (!res.ok) throw new Error("後端回應錯誤");
         const data = await res.json();
         renderProducts(data);
@@ -460,11 +472,14 @@ h1 {
       for (const p of products) {
         const div = document.createElement("div");
         div.className = "card";
-        div.innerHTML = `
-          <img src="${p.image_url || ""}" class="product-img" onerror="this.style.display='none';" />
-          <h3 style="margin-top:8px">${p.title}</h3>
-          <div class="small">商品編號：${p.id}</div>
-        `;
+       div.innerHTML = `
+  <img src="${p.image_url || (p.imagePath ? API_BASE + '/' + p.imagePath : '')}" 
+       class="product-img" 
+       onerror="this.src='https://placehold.co/600x400?text=無商品圖';" />
+  <h3 style="margin-top:8px">${p.title}</h3>
+  <div class="small">商品編號：${p.id}</div>
+  <div style="color:#2b8cff; font-weight:bold;">${p.options && p.options[0] ? '$' + p.options[0].price : '點擊查看價格'}</div>
+`;
         mainContent.appendChild(div);
       }
     }
@@ -478,11 +493,15 @@ h1 {
         return;
       }
       try {
-        const res = await fetch(API_BASE + "/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password })
-        });
+       // 修正點：路徑加上 /api，這樣才能對應到您後端的 router.post("/add", ...)
+const res = await fetch(`${API_BASE}/api/products/add`, {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer " + currentUser.token
+    // 注意：使用 FormData 時不要手動設定 Content-Type，瀏覽器會自動處理
+  },
+  body: formData
+});
         const data = await res.json();
         if (!res.ok) {
           alert(data.message || "登入失敗");
