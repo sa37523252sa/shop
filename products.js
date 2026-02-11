@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const upload = multer({ dest: "uploads/" }); // 確保你有 uploads 資料夾
+const upload = multer({ dest: "upload/" }); // 確保你有 uploads 資料夾
 
 // 新增商品的路由
 router.post("/add", upload.single("image"), async (req, res) => {
