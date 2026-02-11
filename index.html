@@ -143,46 +143,61 @@
         } catch (err) { container.innerHTML = "連線失敗，請稍後再試。"; }
     }
 
-    async function saveProductToCloud(e) {
-        if (e) e.preventDefault();
-        if (!authToken) return alert("請先登入管理員帳號！");
+   async function saveProductToCloud(e) {
+    if (e) e.preventDefault();
+    const btn = document.getElementById('saveProduct');
+    
+    // 檢查登入狀態
+    if (!authToken) return alert("錯誤：找不到登入憑證，請重新登入！");
 
-        const title = document.getElementById('prodTitle').value;
-        const imageFile = document.getElementById('prodImage').files[0];
-        
-        // 抓取所有選項組合
-        const rows = document.querySelectorAll('.option-row');
-        const options = [];
-        rows.forEach(row => {
-            const name = row.querySelector('.opt-name').value;
-            const price = row.querySelector('.opt-price').value;
-            if(name && price) options.push({ name, price });
+    const title = document.getElementById('prodTitle').value;
+    const imageFile = document.getElementById('prodImage').files[0];
+    const rows = document.querySelectorAll('.option-row');
+    const options = [];
+
+    rows.forEach(row => {
+        const name = row.querySelector('.opt-name').value;
+        const price = row.querySelector('.opt-price').value;
+        if(name && price) options.push({ name, price });
+    });
+
+    if(!title || options.length === 0) return alert("請填寫商品名稱與至少一個價格");
+
+    // UI 反饋：按鈕變色代表正在跑
+    btn.innerText = "上傳中...";
+    btn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('title', title);
+    if (imageFile) formData.append('image', imageFile);
+    formData.append('options', JSON.stringify(options)); 
+
+    try {
+        const res = await fetch(`${API_BASE}/api/products/add`, {
+            method: 'POST',
+            headers: { 
+                'Authorization': `Bearer ${authToken}` 
+                // 注意：這裡絕對不能加 'Content-Type': 'application/json'
+            },
+            body: formData
         });
 
-        if(!title || options.length === 0) return alert("請至少填寫商品名稱與一個選項價格");
+        const result = await res.json();
 
-        const formData = new FormData();
-        formData.append('title', title);
-        if (imageFile) formData.append('image', imageFile);
-        formData.append('options', JSON.stringify(options));
-
-        try {
-            const res = await fetch(`${API_BASE}/api/products/add`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${authToken}` },
-                body: formData
-            });
-            if (res.ok) {
-                alert("✨ 商品新增成功！");
-                location.reload();
-            } else {
-                const result = await res.json();
-                alert("失敗：" + (result.message || "伺服器拒絕請求"));
-            }
-        } catch (err) {
-            alert("連線錯誤，請確認網路或伺服器狀態。");
+        if (res.ok) {
+            alert("✨ 商品新增成功！");
+            location.reload();
+        } else {
+            alert("失敗：" + (result.message || "伺服器錯誤"));
         }
+    } catch (err) {
+        alert("連線失敗！請檢查 Render Logs 是否報錯");
+        console.error(err);
+    } finally {
+        btn.innerText = "確認上架";
+        btn.disabled = false;
     }
+}
 
     function updateUserUI() {
         const area = document.getElementById('userArea');
