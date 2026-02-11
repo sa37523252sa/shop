@@ -1,24 +1,57 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const upload = multer({ dest: "upload/" }); // 確保你有 uploads 資料夾
+const path = require("path");
 
-// 新增商品的路由
-router.post("/add", upload.single("image"), async (req, res) => {
+// 設定圖片儲存位置與檔名
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'upload/'); // 確保你 GitHub 上叫 upload
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ storage: storage });
+
+// 模擬資料庫
+let products = []; 
+
+// 取得商品列表
+router.get("/list", (req, res) => {
+    res.json(products);
+});
+
+// 新增商品 (關鍵路徑)
+router.post("/add", upload.single("image"), (req, res) => {
     try {
-        const { title } = req.body;
-        // 關鍵：前端傳來的是字串，要轉回 JSON 陣列
-        const options = JSON.parse(req.body.options); 
+        const { title, options } = req.body;
         
-        const imagePath = req.file ? req.file.path : null;
+        // 關鍵：處理前端傳來的 JSON 字串
+        let parsedOptions = [];
+        try {
+            parsedOptions = typeof options === 'string' ? JSON.parse(options) : options;
+        } catch (e) {
+            console.error("選項解析失敗:", e);
+        }
 
-        // 這裡寫入你的資料庫邏輯 (例如：db.push 或 db.insert)
-        console.log("收到商品：", title, options, imagePath);
+        const newProduct = {
+            id: Date.now(),
+            title: title || "未命名商品",
+            options: parsedOptions,
+            imagePath: req.file ? req.file.path : null,
+            // 產生可存取的 URL
+            image_url: req.file ? `https://${req.get('host')}/${req.file.path}` : null
+        };
 
-        res.status(200).json({ message: "新增成功", title });
+        products.push(newProduct);
+        console.log("✅ 成功新增商品:", newProduct);
+        
+        res.status(200).json({ message: "新增成功", product: newProduct });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "伺服器解析失敗" });
+        console.error("❌ 後端報錯:", err);
+        res.status(500).json({ message: "伺服器內部錯誤", error: err.message });
     }
 });
 
