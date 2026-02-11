@@ -143,24 +143,29 @@
         } catch (err) { container.innerHTML = "連線失敗，請稍後再試。"; }
     }
 
-   async function saveProductToCloud(e) {
+async function saveProductToCloud(e) {
     if (e) e.preventDefault();
-    const btn = document.getElementById('saveProduct');
     
-    // 檢查登入狀態
-    if (!authToken) return alert("錯誤：找不到登入憑證，請重新登入！");
-
+    // 1. 取得標題 (對應你截圖的 "標題" 輸入框)
     const title = document.getElementById('prodTitle').value;
+    
+    // 2. 取得檔案 (對應你截圖的 "選擇檔案" 按鈕)
     const imageFile = document.getElementById('prodImage').files[0];
+
+    // 3. 取得選項 (重點！)
+    // 根據你的截圖，每一列都有一個名稱和一個單價
+    // 請確保你 addOptionField 產生的 input 分別有 'opt-name' 和 'opt-price' 類別
     const rows = document.querySelectorAll('.option-row');
     const options = [];
-
     rows.forEach(row => {
         const name = row.querySelector('.opt-name').value;
         const price = row.querySelector('.opt-price').value;
         if(name && price) options.push({ name, price });
     });
 
+    // ... 其餘 fetch 程式碼保持不變 ...
+}
+  
     if(!title || options.length === 0) return alert("請填寫商品名稱與至少一個價格");
 
     // UI 反饋：按鈕變色代表正在跑
