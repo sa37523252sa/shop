@@ -2,6 +2,10 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const app = express();
+// 確保這裡寫的是 upload 而不是 uploads
+const upload = multer({ dest: 'upload/' }); 
+
+
 
 app.use(cors());
 app.use(express.json());
