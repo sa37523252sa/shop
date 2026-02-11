@@ -1,22 +1,25 @@
 const express = require("express");
 const router = express.Router();
-
-// 修正路徑：middleware 不在資料夾，是同一層
-const { auth, admin } = require("./authMiddleware");
-
-// 修正路徑：productController 也在同層
-const { addProduct, listProducts, searchProducts } = require("./productController");
-
 const multer = require("multer");
-const upload = multer({ dest: "uploads/" });
+const upload = multer({ dest: "uploads/" }); // 確保你有 uploads 資料夾
 
-// 新增商品（需要登入 + 管理員）
-router.post("/add", auth, admin, upload.single("image"), addProduct);
+// 新增商品的路由
+router.post("/add", upload.single("image"), async (req, res) => {
+    try {
+        const { title } = req.body;
+        // 關鍵：前端傳來的是字串，要轉回 JSON 陣列
+        const options = JSON.parse(req.body.options); 
+        
+        const imagePath = req.file ? req.file.path : null;
 
-// 列出商品
-router.get("/list", listProducts);
+        // 這裡寫入你的資料庫邏輯 (例如：db.push 或 db.insert)
+        console.log("收到商品：", title, options, imagePath);
 
-// 搜尋商品
-router.get("/search", searchProducts);
+        res.status(200).json({ message: "新增成功", title });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "伺服器解析失敗" });
+    }
+});
 
 module.exports = router;
